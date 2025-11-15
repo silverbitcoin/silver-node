@@ -56,6 +56,10 @@ pub struct NodeConfig {
     /// GPU configuration
     #[serde(default)]
     pub gpu: GpuConfig,
+
+    /// Memory management configuration (for consumer hardware)
+    #[serde(default)]
+    pub memory: MemoryManagementConfig,
 }
 
 /// Network configuration
@@ -220,6 +224,42 @@ pub struct GpuConfig {
     pub min_batch_size: usize,
 }
 
+/// Memory management configuration (for consumer hardware optimization)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryManagementConfig {
+    /// Maximum memory usage in bytes (default: 8GB for 16GB systems)
+    #[serde(default = "default_max_memory_usage")]
+    pub max_memory_usage: u64,
+
+    /// Enable memory monitoring
+    #[serde(default = "default_enable_memory_monitoring")]
+    pub enable_memory_monitoring: bool,
+
+    /// Warning threshold (0.0 to 1.0)
+    #[serde(default = "default_memory_warning_threshold")]
+    pub memory_warning_threshold: f64,
+
+    /// Critical threshold (0.0 to 1.0)
+    #[serde(default = "default_memory_critical_threshold")]
+    pub memory_critical_threshold: f64,
+
+    /// Memory check interval in seconds
+    #[serde(default = "default_memory_check_interval")]
+    pub memory_check_interval: u64,
+}
+
+impl Default for MemoryManagementConfig {
+    fn default() -> Self {
+        Self {
+            max_memory_usage: default_max_memory_usage(),
+            enable_memory_monitoring: default_enable_memory_monitoring(),
+            memory_warning_threshold: default_memory_warning_threshold(),
+            memory_critical_threshold: default_memory_critical_threshold(),
+            memory_check_interval: default_memory_check_interval(),
+        }
+    }
+}
+
 // Default value functions
 fn default_max_peers() -> usize { 50 }
 fn default_snapshot_interval() -> u64 { 480 }
@@ -240,6 +280,11 @@ fn default_worker_threads() -> usize { 16 }
 fn default_fuel_price() -> u64 { 1000 }
 fn default_gpu_backend() -> String { "auto".to_string() }
 fn default_min_batch_size() -> usize { 100 }
+fn default_max_memory_usage() -> u64 { 8 * 1024 * 1024 * 1024 } // 8 GB
+fn default_enable_memory_monitoring() -> bool { true }
+fn default_memory_warning_threshold() -> f64 { 0.85 }
+fn default_memory_critical_threshold() -> f64 { 0.95 }
+fn default_memory_check_interval() -> u64 { 30 }
 
 impl NodeConfig {
     /// Load configuration from TOML file
