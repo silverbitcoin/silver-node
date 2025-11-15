@@ -1,0 +1,59 @@
+[package]
+name = "silver-node"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Main SilverBitcoin blockchain node binary"
+
+[[bin]]
+name = "silver-node"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+silver-core = { path = "../silver-core" }
+silver-crypto = { path = "../silver-crypto" }
+silver-consensus = { path = "../silver-consensus" }
+silver-execution = { path = "../silver-execution" }
+silver-storage = { path = "../silver-storage" }
+silver-network = { path = "../silver-network" }
+silver-api = { path = "../silver-api" }
+silver-gpu = { path = "../silver-gpu", optional = true }
+
+# Workspace dependencies
+tokio = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+
+# Metrics
+prometheus = { workspace = true }
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+
+# HTTP server
+axum = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+config = { workspace = true }
+dotenv = { workspace = true }
+
+# System info
+num_cpus = "1.16"
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[features]
+default = []
+gpu = ["silver-gpu"]
