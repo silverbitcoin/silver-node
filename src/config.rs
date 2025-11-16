@@ -450,6 +450,7 @@ impl NodeConfig {
                 fuel_price: default_fuel_price(),
             },
             gpu: GpuConfig::default(),
+            memory: MemoryManagementConfig::default(),
         }
     }
 }
