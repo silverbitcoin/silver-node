@@ -19,6 +19,7 @@ pub enum MetricsError {
 
     /// HTTP server error
     #[error("HTTP server error: {0}")]
+    #[allow(dead_code)]
     HttpError(String),
 
     /// Metrics not initialized
@@ -191,10 +192,15 @@ pub struct SystemMetrics {
 /// Complete metrics collection
 #[derive(Clone)]
 pub struct NodeMetrics {
+    #[allow(dead_code)]
     pub consensus: ConsensusMetrics,
+    #[allow(dead_code)]
     pub execution: ExecutionMetrics,
+    #[allow(dead_code)]
     pub storage: StorageMetrics,
+    #[allow(dead_code)]
     pub network: NetworkMetrics,
+    #[allow(dead_code)]
     pub api: ApiMetrics,
     pub system: SystemMetrics,
 }
@@ -559,6 +565,7 @@ impl MetricsExporter {
     }
 
     /// Get metrics handle
+    #[allow(dead_code)]
     pub fn metrics(&self) -> Arc<RwLock<Option<NodeMetrics>>> {
         self.metrics.clone()
     }

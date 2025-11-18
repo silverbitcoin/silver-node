@@ -13,10 +13,12 @@ use tracing::{info, warn, error};
 pub enum ResourceError {
     /// Failed to read system information
     #[error("Failed to read system info: {0}")]
+    #[allow(dead_code)]
     SystemInfoError(String),
 
     /// Failed to read process information
     #[error("Failed to read process info: {0}")]
+    #[allow(dead_code)]
     ProcessInfoError(String),
 
     /// IO error
@@ -61,9 +63,11 @@ pub struct CpuUsage {
     pub usage_percent: f64,
     
     /// Number of CPU cores
+    #[allow(dead_code)]
     pub core_count: usize,
     
     /// Per-core usage percentages
+    #[allow(dead_code)]
     pub per_core_usage: Vec<f64>,
 }
 
@@ -77,6 +81,7 @@ pub struct MemoryUsage {
     pub used_bytes: u64,
     
     /// Available memory in bytes
+    #[allow(dead_code)]
     pub available_bytes: u64,
     
     /// Usage percentage (0-100)
@@ -93,6 +98,7 @@ pub struct DiskUsage {
     pub used_bytes: u64,
     
     /// Available disk space in bytes
+    #[allow(dead_code)]
     pub available_bytes: u64,
     
     /// Usage percentage (0-100)
@@ -103,9 +109,11 @@ pub struct DiskUsage {
 #[derive(Debug, Clone)]
 pub struct ProcessUsage {
     /// Process ID
+    #[allow(dead_code)]
     pub pid: u32,
     
     /// Number of threads
+    #[allow(dead_code)]
     pub thread_count: usize,
     
     /// Number of open file descriptors
@@ -134,6 +142,7 @@ pub struct ResourceSnapshot {
     pub process: ProcessUsage,
     
     /// Timestamp
+    #[allow(dead_code)]
     pub timestamp: std::time::SystemTime,
 }
 
@@ -313,6 +322,7 @@ impl ResourceMonitor {
     }
 
     /// Get last resource snapshot
+    #[allow(dead_code)]
     pub async fn last_snapshot(&self) -> Option<ResourceSnapshot> {
         self.last_snapshot.read().await.clone()
     }
@@ -463,7 +473,7 @@ impl ResourceMonitor {
         
         
         // Use statvfs
-        let metadata = std::fs::metadata(path)?;
+        let _metadata = std::fs::metadata(path)?;
         
         // This is a simplified version
         // In production, use nix crate's statvfs

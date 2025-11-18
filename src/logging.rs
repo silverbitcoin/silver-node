@@ -10,7 +10,7 @@ use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter, Layer,
+    EnvFilter,
 };
 use tracing_appender::{non_blocking, rolling};
 
@@ -36,7 +36,7 @@ pub type Result<T> = std::result::Result<T, LoggingError>;
 /// Initialize logging system
 pub fn init_logging(config: &LoggingConfig) -> Result<()> {
     // Parse log level
-    let level = parse_log_level(&config.level)?;
+    let _level = parse_log_level(&config.level)?;
 
     // Create log directory if it doesn't exist
     if let Some(parent) = config.log_path.parent() {

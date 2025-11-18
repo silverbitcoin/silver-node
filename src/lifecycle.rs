@@ -115,11 +115,13 @@ impl LifecycleManager {
     }
 
     /// Get node uptime
+    #[allow(dead_code)]
     pub fn uptime(&self) -> Option<Duration> {
         self.start_time.map(|start| start.elapsed())
     }
 
     /// Resume from last snapshot
+    #[allow(dead_code)]
     pub async fn resume_from_snapshot(&mut self) -> Result<()> {
         info!("Resuming from last snapshot");
 
@@ -134,6 +136,7 @@ impl LifecycleManager {
     }
 
     /// Persist state before shutdown
+    #[allow(dead_code)]
     pub async fn persist_state(&self) -> Result<()> {
         info!("Persisting node state");
 
@@ -148,6 +151,7 @@ impl LifecycleManager {
     }
 
     /// Check if node is healthy
+    #[allow(dead_code)]
     pub async fn health_check(&self) -> HealthStatus {
         let state = self.node.state().await;
         let uptime = self.uptime();
@@ -168,26 +172,32 @@ impl LifecycleManager {
 #[derive(Debug, Clone)]
 pub struct HealthStatus {
     /// Is node running
+    #[allow(dead_code)]
     pub is_running: bool,
 
     /// Current node state
     pub state: NodeState,
 
     /// Uptime in seconds
+    #[allow(dead_code)]
     pub uptime_seconds: u64,
 
     /// Is node synced with network
+    #[allow(dead_code)]
     pub is_synced: bool,
 
     /// Current snapshot height
+    #[allow(dead_code)]
     pub snapshot_height: u64,
 
     /// Number of connected peers
+    #[allow(dead_code)]
     pub peer_count: usize,
 }
 
 impl HealthStatus {
     /// Check if node is healthy
+    #[allow(dead_code)]
     pub fn is_healthy(&self) -> bool {
         self.is_running && (self.is_synced || self.state == NodeState::Syncing)
     }
@@ -196,9 +206,11 @@ impl HealthStatus {
 /// Shutdown coordinator for managing subsystem shutdown order
 pub struct ShutdownCoordinator {
     /// Shutdown signal sender
+    #[allow(dead_code)]
     shutdown_tx: tokio::sync::broadcast::Sender<()>,
 
     /// Subsystem shutdown handles
+    #[allow(dead_code)]
     handles: Vec<tokio::task::JoinHandle<()>>,
 }
 
@@ -214,16 +226,19 @@ impl ShutdownCoordinator {
     }
 
     /// Get a shutdown receiver
+    #[allow(dead_code)]
     pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<()> {
         self.shutdown_tx.subscribe()
     }
 
     /// Register a subsystem handle
+    #[allow(dead_code)]
     pub fn register_handle(&mut self, handle: tokio::task::JoinHandle<()>) {
         self.handles.push(handle);
     }
 
     /// Trigger shutdown for all subsystems
+    #[allow(dead_code)]
     pub async fn shutdown(&mut self) -> Result<()> {
         info!("Triggering shutdown for all subsystems");
 

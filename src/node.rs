@@ -21,14 +21,17 @@ pub enum NodeError {
 
     /// Network initialization error
     #[error("Network error: {0}")]
+    #[allow(dead_code)]
     NetworkError(String),
 
     /// Consensus initialization error
     #[error("Consensus error: {0}")]
+    #[allow(dead_code)]
     ConsensusError(String),
 
     /// Execution initialization error
     #[error("Execution error: {0}")]
+    #[allow(dead_code)]
     ExecutionError(String),
 
     /// API initialization error
@@ -41,6 +44,7 @@ pub enum NodeError {
 
     /// Genesis error
     #[error("Genesis error: {0}")]
+    #[allow(dead_code)]
     GenesisError(String),
 
     /// Shutdown error
@@ -450,6 +454,7 @@ impl SilverNode {
     }
 
     /// Check if node is running
+    #[allow(dead_code)]
     pub async fn is_running(&self) -> bool {
         *self.state.read().await == NodeState::Running
     }
@@ -536,26 +541,31 @@ impl SilverNode {
     }
 
     /// Get node configuration
+    #[allow(dead_code)]
     pub fn config(&self) -> &NodeConfig {
         &self.config
     }
 
     /// Get genesis configuration
+    #[allow(dead_code)]
     pub fn genesis(&self) -> Option<&GenesisConfig> {
         self.genesis.as_ref()
     }
 
     /// Get health state
+    #[allow(dead_code)]
     pub fn health_state(&self) -> &HealthState {
         &self.health_state
     }
 
     /// Get metrics exporter
+    #[allow(dead_code)]
     pub fn metrics(&self) -> Option<&MetricsExporter> {
         self.metrics.as_ref()
     }
 
     /// Get resource monitor
+    #[allow(dead_code)]
     pub fn resource_monitor(&self) -> Option<&ResourceMonitor> {
         self.resource_monitor.as_ref()
     }

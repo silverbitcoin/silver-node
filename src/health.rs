@@ -20,6 +20,7 @@ use tracing::{info, error};
 pub enum HealthError {
     /// HTTP server error
     #[error("HTTP server error: {0}")]
+    #[allow(dead_code)]
     HttpError(String),
 
     /// Health check not initialized
@@ -136,11 +137,13 @@ impl HealthState {
     }
 
     /// Update peer count
+    #[allow(dead_code)]
     pub async fn set_peer_count(&self, count: usize) {
         *self.peer_count.write().await = count;
     }
 
     /// Update snapshot height
+    #[allow(dead_code)]
     pub async fn set_snapshot_height(&self, height: u64) {
         *self.snapshot_height.write().await = height;
     }
@@ -251,6 +254,7 @@ impl HealthCheckServer {
     }
 
     /// Get health state
+    #[allow(dead_code)]
     pub fn state(&self) -> HealthState {
         self.state.clone()
     }
