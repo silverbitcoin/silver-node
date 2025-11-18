@@ -2,6 +2,8 @@
 //!
 //! Main blockchain node binary that coordinates all subsystems.
 
+#![allow(missing_docs)] // Internal implementation details
+
 mod config;
 mod genesis;
 mod node;

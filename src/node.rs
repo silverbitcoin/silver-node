@@ -10,7 +10,7 @@ use crate::resources::{ResourceMonitor, ResourceThresholds};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 /// Node error types
 #[derive(Error, Debug)]
@@ -576,7 +576,7 @@ mod tests {
     #[tokio::test]
     async fn test_node_state_transitions() {
         let config = NodeConfig::default();
-        let mut node = SilverNode::new(config, None);
+        let node = SilverNode::new(config, None);
         
         assert_eq!(node.state().await, NodeState::Initializing);
         

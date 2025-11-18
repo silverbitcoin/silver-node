@@ -268,7 +268,7 @@ impl Default for ShutdownCoordinator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::NodeConfig;
+    
 
     #[tokio::test]
     async fn test_health_status() {

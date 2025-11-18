@@ -3,12 +3,12 @@
 //! Prometheus-compatible metrics exporter for node monitoring.
 
 use prometheus::{
-    Counter, Gauge, Histogram, HistogramOpts, IntCounter, IntGauge, Opts, Registry,
+    Counter, Gauge, Histogram, HistogramOpts, IntCounter, IntGauge, Registry,
 };
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 /// Metrics error types
 #[derive(Error, Debug)]

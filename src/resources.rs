@@ -460,7 +460,7 @@ impl ResourceMonitor {
 
     #[cfg(unix)]
     fn get_disk_usage_unix(path: &Path) -> Result<DiskUsage> {
-        use std::os::unix::fs::MetadataExt;
+        
         
         // Use statvfs
         let metadata = std::fs::metadata(path)?;

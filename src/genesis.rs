@@ -3,7 +3,6 @@
 //! Genesis state initialization for SilverBitcoin blockchain.
 
 use serde::{Deserialize, Serialize};
-use silver_core::{SilverAddress, ValidatorMetadata};
 use std::path::PathBuf;
 use thiserror::Error;
 
