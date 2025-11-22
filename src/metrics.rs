@@ -684,37 +684,321 @@ impl MetricsExporter {
 
     /// Get CPU usage percentage
     fn get_cpu_usage() -> std::io::Result<f64> {
-        // Use sysinfo or procfs to get CPU usage
-        // For now, return a placeholder
-        Ok(0.0)
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+            use std::thread;
+            use std::time::Duration;
+
+            // Read /proc/stat for CPU times
+            let stat1 = fs::read_to_string("/proc/stat")?;
+            let cpu1 = Self::parse_cpu_stat(&stat1)?;
+
+            thread::sleep(Duration::from_millis(100));
+
+            let stat2 = fs::read_to_string("/proc/stat")?;
+            let cpu2 = Self::parse_cpu_stat(&stat2)?;
+
+            let total_diff = (cpu2.0 + cpu2.1 + cpu2.2 + cpu2.3) - (cpu1.0 + cpu1.1 + cpu1.2 + cpu1.3);
+            let idle_diff = cpu2.3 - cpu1.3;
+
+            if total_diff == 0 {
+                Ok(0.0)
+            } else {
+                Ok(((total_diff - idle_diff) as f64 / total_diff as f64) * 100.0)
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("top")
+                .args(&["-l", "1", "-n", "0"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if line.contains("CPU usage:") {
+                    if let Some(user_part) = line.split("user,").next() {
+                        if let Some(cpu_str) = user_part.split_whitespace().last() {
+                            if let Ok(cpu) = cpu_str.parse::<f64>() {
+                                return Ok(cpu);
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(0.0)
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("wmic")
+                .args(&["os", "get", "TotalVisibleMemorySize,FreePhysicalMemory"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let lines: Vec<&str> = stdout.lines().collect();
+            if lines.len() >= 2 {
+                let parts: Vec<&str> = lines[1].split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let (Ok(total), Ok(free)) = (parts[0].parse::<u64>(), parts[1].parse::<u64>()) {
+                        return Ok(((total - free) as f64 / total as f64) * 100.0);
+                    }
+                }
+            }
+            Ok(0.0)
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        {
+            Ok(0.0)
+        }
+    }
+
+    /// Parse CPU stats from /proc/stat
+    #[cfg(target_os = "linux")]
+    fn parse_cpu_stat(stat: &str) -> std::io::Result<(u64, u64, u64, u64)> {
+        for line in stat.lines() {
+            if line.starts_with("cpu ") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 5 {
+                    let user = parts[1].parse::<u64>().unwrap_or(0);
+                    let nice = parts[2].parse::<u64>().unwrap_or(0);
+                    let system = parts[3].parse::<u64>().unwrap_or(0);
+                    let idle = parts[4].parse::<u64>().unwrap_or(0);
+                    return Ok((user, nice, system, idle));
+                }
+            }
+        }
+        Ok((0, 0, 0, 0))
     }
 
     /// Get memory usage in bytes
     fn get_memory_usage() -> std::io::Result<u64> {
-        // Use sysinfo or procfs to get memory usage
-        // For now, return a placeholder
-        Ok(0)
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+
+            let status = fs::read_to_string("/proc/self/status")?;
+            for line in status.lines() {
+                if line.starts_with("VmRSS:") {
+                    if let Some(size_str) = line.split_whitespace().nth(1) {
+                        if let Ok(size_kb) = size_str.parse::<u64>() {
+                            return Ok(size_kb * 1024);
+                        }
+                    }
+                }
+            }
+            Ok(0)
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("ps")
+                .args(&["-o", "rss=", "-p", &std::process::id().to_string()])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Ok(rss_kb) = stdout.trim().parse::<u64>() {
+                Ok(rss_kb * 1024)
+            } else {
+                Ok(0)
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("tasklist")
+                .args(&["/FI", &format!("PID eq {}", std::process::id()), "/FO", "CSV"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                let parts: Vec<&str> = line.split(',').collect();
+                if parts.len() >= 2 {
+                    let mem_str = parts[1].trim_matches(|c| c == '"' || c == ' ');
+                    if let Ok(mem_mb) = mem_str.replace(" K", "").parse::<u64>() {
+                        return Ok(mem_mb * 1024);
+                    }
+                }
+            }
+            Ok(0)
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        {
+            Ok(0)
+        }
     }
 
     /// Get disk usage (used, available) in bytes
     fn get_disk_usage() -> std::io::Result<(u64, u64)> {
-        // Use statvfs or similar to get disk usage
-        // For now, return placeholders
-        Ok((0, 0))
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+
+            let statvfs = fs::read_to_string("/proc/mounts")?;
+            for line in statvfs.lines() {
+                if line.contains("/") {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        let mount_point = parts[1];
+                        if let Ok(stat) = nix::sys::statvfs::statvfs(mount_point) {
+                            let block_size = stat.block_size() as u64;
+                            let available = stat.blocks_available() * block_size;
+                            let total = stat.blocks() * block_size;
+                            let used = total - available;
+                            return Ok((used, available));
+                        }
+                    }
+                }
+            }
+            Ok((0, 0))
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("df")
+                .args(&["-k", "/"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 4 {
+                    if let (Ok(total_kb), Ok(used_kb)) = (parts[1].parse::<u64>(), parts[2].parse::<u64>()) {
+                        return Ok((used_kb * 1024, (total_kb - used_kb) * 1024));
+                    }
+                }
+            }
+            Ok((0, 0))
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("wmic")
+                .args(&["logicaldisk", "get", "size,freespace"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let lines: Vec<&str> = stdout.lines().collect();
+            if lines.len() >= 2 {
+                let parts: Vec<&str> = lines[1].split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let (Ok(free), Ok(total)) = (parts[0].parse::<u64>(), parts[1].parse::<u64>()) {
+                        return Ok((total - free, free));
+                    }
+                }
+            }
+            Ok((0, 0))
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        {
+            Ok((0, 0))
+        }
     }
 
     /// Get thread count
     fn get_thread_count() -> std::io::Result<usize> {
-        // Count threads in /proc/self/task or use sysinfo
-        // For now, return a placeholder
-        Ok(0)
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+
+            let task_dir = fs::read_dir("/proc/self/task")?;
+            Ok(task_dir.count())
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("ps")
+                .args(&["-o", "nlwp=", "-p", &std::process::id().to_string()])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.trim().parse::<usize>().unwrap_or(1)
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("wmic")
+                .args(&["process", "where", &format!("ProcessId={}", std::process::id()), "get", "ThreadCount"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                if let Ok(count) = line.trim().parse::<usize>() {
+                    return Ok(count);
+                }
+            }
+            Ok(1)
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        {
+            Ok(1)
+        }
     }
 
     /// Get file descriptor count
     fn get_file_descriptor_count() -> std::io::Result<usize> {
-        // Count files in /proc/self/fd or use sysinfo
-        // For now, return a placeholder
-        Ok(0)
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+
+            let fd_dir = fs::read_dir("/proc/self/fd")?;
+            Ok(fd_dir.count())
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("lsof")
+                .args(&["-p", &std::process::id().to_string()])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Ok(stdout.lines().count().saturating_sub(1))
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let output = Command::new("wmic")
+                .args(&["process", "where", &format!("ProcessId={}", std::process::id()), "get", "HandleCount"])
+                .output()?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                if let Ok(count) = line.trim().parse::<usize>() {
+                    return Ok(count);
+                }
+            }
+            Ok(0)
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        {
+            Ok(0)
+        }
     }
 }
 

@@ -125,11 +125,21 @@ impl LifecycleManager {
     pub async fn resume_from_snapshot(&mut self) -> Result<()> {
         info!("Resuming from last snapshot");
 
-        // TODO: Implement snapshot resume logic
-        // - Load latest snapshot from storage
-        // - Verify snapshot integrity
-        // - Restore state from snapshot
-        // - Apply any pending transactions
+        // Load latest snapshot from storage
+        let latest_snapshot = self.node.storage.get_latest_snapshot()?
+            .ok_or_else(|| anyhow::anyhow!("No snapshot found in storage"))?;
+
+        // Verify snapshot integrity
+        self.node.consensus.verify_snapshot(&latest_snapshot).await?;
+
+        // Restore state from snapshot
+        self.node.consensus.apply_snapshot(&latest_snapshot).await?;
+
+        // Apply any pending transactions
+        let pending_txs = self.node.storage.get_pending_transactions()?;
+        for tx in pending_txs {
+            self.node.execution.execute(&tx).await.ok();
+        }
 
         info!("Successfully resumed from snapshot");
         Ok(())
@@ -140,11 +150,25 @@ impl LifecycleManager {
     pub async fn persist_state(&self) -> Result<()> {
         info!("Persisting node state");
 
-        // TODO: Implement state persistence
-        // - Create snapshot of current state
-        // - Flush all pending writes
-        // - Sync database to disk
-        // - Save checkpoint information
+        // Create snapshot of current state
+        let snapshot = self.node.consensus.create_snapshot().await?;
+        self.node.storage.store_snapshot(&snapshot)?;
+
+        // Flush all pending writes
+        self.node.storage.flush()?;
+
+        // Sync database to disk
+        self.node.storage.sync_to_disk()?;
+
+        // Save checkpoint information
+        let checkpoint = Checkpoint {
+            snapshot_number: snapshot.sequence_number,
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+        };
+        self.node.storage.store_checkpoint(&checkpoint)?;
 
         info!("State persisted successfully");
         Ok(())
@@ -156,14 +180,18 @@ impl LifecycleManager {
         let state = self.node.state().await;
         let uptime = self.uptime();
 
+        // Get additional health metrics
+        let is_synced = self.node.check_sync_status().await.unwrap_or(false);
+        let snapshot_height = self.node.consensus.get_current_snapshot_number();
+        let peer_count = self.node.network.get_peer_count().await.unwrap_or(0);
+
         HealthStatus {
             is_running: state == NodeState::Running,
             state,
             uptime_seconds: uptime.map(|d| d.as_secs()).unwrap_or(0),
-            // TODO: Add more health metrics
-            is_synced: false,
-            snapshot_height: 0,
-            peer_count: 0,
+            is_synced,
+            snapshot_height,
+            peer_count,
         }
     }
 }

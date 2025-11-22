@@ -354,25 +354,63 @@ impl ResourceMonitor {
 
     #[cfg(target_os = "linux")]
     fn get_cpu_usage_linux() -> Result<CpuUsage> {
-        // Read /proc/stat for CPU usage
-        // This is a simplified implementation
-        // In production, you'd want to track deltas over time
+        // Read /proc/stat for CPU usage with delta calculation
+        use std::fs;
+        use std::thread;
+        use std::time::Duration;
+
+        let stat1 = fs::read_to_string("/proc/stat")?;
+        let cpu1 = Self::parse_cpu_stat(&stat1)?;
+
+        thread::sleep(Duration::from_millis(100));
+
+        let stat2 = fs::read_to_string("/proc/stat")?;
+        let cpu2 = Self::parse_cpu_stat(&stat2)?;
+
+        let total_diff = (cpu2.0 + cpu2.1 + cpu2.2 + cpu2.3) - (cpu1.0 + cpu1.1 + cpu1.2 + cpu1.3);
+        let idle_diff = cpu2.3 - cpu1.3;
+
+        let usage_percent = if total_diff == 0 {
+            0.0
+        } else {
+            ((total_diff - idle_diff) as f64 / total_diff as f64) * 100.0
+        };
+
         let core_count = num_cpus::get();
         
         Ok(CpuUsage {
-            usage_percent: 0.0, // Placeholder - would need delta calculation
+            usage_percent,
             core_count,
-            per_core_usage: vec![0.0; core_count],
+            per_core_usage: vec![usage_percent; core_count],
         })
     }
 
     #[cfg(target_os = "macos")]
     fn get_cpu_usage_macos() -> Result<CpuUsage> {
-        // Use host_processor_info or similar
+        // Use host_processor_info via Mach kernel
+        use std::process::Command;
+
+        let output = Command::new("top")
+            .args(&["-l", "1", "-n", "0"])
+            .output()?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut usage_percent = 0.0;
+
+        for line in stdout.lines() {
+            if line.contains("CPU usage:") {
+                if let Some(user_part) = line.split("user,").next() {
+                    if let Some(cpu_str) = user_part.split_whitespace().last() {
+                        usage_percent = cpu_str.parse::<f64>().unwrap_or(0.0);
+                    }
+                }
+            }
+        }
+
         let core_count = num_cpus::get();
         
         Ok(CpuUsage {
-            usage_percent: 0.0, // Placeholder
+            usage_percent,
             core_count,
             per_core_usage: vec![0.0; core_count],
         })
@@ -470,15 +508,14 @@ impl ResourceMonitor {
 
     #[cfg(unix)]
     fn get_disk_usage_unix(path: &Path) -> Result<DiskUsage> {
+        // Use statvfs to get filesystem statistics
+        use nix::sys::statvfs::statvfs;
+
+        let stat = statvfs(path)?;
         
-        
-        // Use statvfs
-        let _metadata = std::fs::metadata(path)?;
-        
-        // This is a simplified version
-        // In production, use nix crate's statvfs
-        let total_bytes = 0u64; // Would get from statvfs
-        let available_bytes = 0u64; // Would get from statvfs
+        let block_size = stat.block_size() as u64;
+        let total_bytes = stat.blocks() * block_size;
+        let available_bytes = stat.blocks_available() * block_size;
         let used_bytes = total_bytes.saturating_sub(available_bytes);
         let usage_percent = if total_bytes > 0 {
             (used_bytes as f64 / total_bytes as f64) * 100.0

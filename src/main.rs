@@ -10,8 +10,10 @@ mod node;
 mod logging;
 mod lifecycle;
 mod metrics;
+mod metrics_alerting;
 mod health;
 mod resources;
+mod production;
 
 use clap::Parser;
 use std::path::PathBuf;
